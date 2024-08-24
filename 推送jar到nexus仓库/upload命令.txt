@@ -1,0 +1,16 @@
+upload命令
+1. 使用gradle task将本地gradle仓库的jar包转成maven格式并放到目标路径中
+
+task cacheToLocalMavenRepository(type: Copy) {
+    from new File('/Users/zhangkang/tool/gradleCache/caches/modules-2/files-2.1')
+    into '/Users/zhangkang/ZK_PRJ/testM2'
+    eachFile {
+        List<String> parts = it.path.split('/')
+        it.path = (parts[0]+ '/' + parts[1]).replace('.','/') + '/' + parts[2] + '/' + parts[4]
+    }
+    includeEmptyDirs false
+}
+
+2. 将mavenimport.sh脚本放在目标路径中，执行命令：
+
+./mavenimport.sh -u admin -p admin -r https://nexus.orb.local/repository/mymaven/
