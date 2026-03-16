@@ -1,0 +1,2 @@
+-- 项目根目录路径下执行
+./gradlew clean publishToMavenLocal "-Dmaven.repo.local=D:/WorkSpace/Maven/C8fab_Repository"
