@@ -11,6 +11,77 @@ task cacheToLocalMavenRepository(type: Copy) {
     includeEmptyDirs false
 }
 
+
+
+加强版
+
+
+task cacheToLocalMavenRepository {
+    group = 'build setup'
+    description = 'Copy Gradle files-2.1 cache into a Maven local-style repo'
+
+    def cacheRoot = file('D:/Temp/OV_GRADLE/caches/modules-2/files-2.1')
+    def mavenRoot = file('D:/OV/maven_r')
+
+    inputs.dir(cacheRoot)
+    outputs.dir(mavenRoot)
+
+    doLast {
+        if (!cacheRoot.directory) {
+            throw new GradleException("Gradle cache not found: ${cacheRoot}")
+        }
+        mavenRoot.mkdirs()
+
+        int copied = 0
+        int skipped = 0
+        cacheRoot.eachFileRecurse { File src ->
+            if (!src.file) {
+                return
+            }
+
+            // files-2.1 layout: group/artifact/version/<hash>/filename
+            String rel = cacheRoot.toPath()
+                    .relativize(src.toPath())
+                    .toString()
+                    .replace('\\', '/')
+            String[] parts = rel.split('/')
+            if (parts.length != 5) {
+                logger.warn("Skip unexpected files-2.1 path (expected 5 segments): ${rel}")
+                skipped++
+                return
+            }
+
+            // Only groupId dots become path segments; keep artifactId/version/filename as-is
+            // (e.g. jakarta.annotation-api, 30.1.1-jre, 4.1.91.Final, *-classifier.jar)
+            String groupPath = parts[0].replace('.', '/')
+            String artifactId = parts[1]
+            String version = parts[2]
+            String filename = parts[4]
+
+            File destDir = new File(mavenRoot, "${groupPath}/${artifactId}/${version}")
+            destDir.mkdirs()
+            File dest = new File(destDir, filename)
+
+            if (dest.exists() && dest.length() == src.length() && dest.lastModified() >= src.lastModified()) {
+                return
+            }
+            java.nio.file.Files.copy(
+                    src.toPath(),
+                    dest.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            copied++
+        }
+        logger.lifecycle("cacheToLocalMavenRepository: copied=${copied}, skippedUnexpected=${skipped}")
+    }
+}
+
+
 2. 将mavenimport.sh脚本放在目标路径中，执行命令：
 
 ./mavenimport.sh -u admin -p admin -r https://nexus.orb.local/repository/mymaven/
+
+
+3. 也可以将Maven仓库地址指向本地 Maven仓库
+maven {
+        url = uri("D:/OV/maven_r")
+    }
